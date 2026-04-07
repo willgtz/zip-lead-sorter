@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZIP Lead Sorter</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #00E5A0;
+    --bg: #0A0F1E;
+    --card: #111827;
+    --border: #1E2D40;
+    --text: #E2E8F0;
+    --muted: #4B5563;
+    --red: #FF6B6B;
+    --yellow: #F59E0B;
+    --purple: #818CF8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 36px 24px;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+  .header-left .eyebrow { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .eyebrow span { color: var(--accent); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; }
+  h1 { font-family: 'Syne', sans-serif; font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
+  .subtitle { color: var(--muted); font-size: 12px; margin-top: 5px; }
+
+  /* Buttons */
+  .btn {
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary { background: var(--accent); color: var(--bg); border: none; padding: 11px 26px; font-size: 13px; font-weight: 600; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 9px 18px; }
+  .btn-config { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 10px 18px; }
+  .btn-config.not-set { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+
+  /* Warning banner */
+  .warn-banner {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .warn-banner span { color: var(--yellow); font-size: 13px; flex: 1; }
+  .btn-warn { background: var(--yellow); border: none; color: var(--bg); padding: 7px 16px; font-weight: 600; border-radius: 6px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 12px; white-space: nowrap; }
+
+  /* Group pills */
+  .group-pills { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .pill {
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .pill-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  /* Config panel */
+  .config-panel {
+    background: var(--card);
+    border: 1px solid rgba(0,229,160,0.2);
+    border-radius: 14px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+  .config-panel h2 { font-family: 'Syne', sans-serif; font-size: 20px; margin-bottom: 4px; }
+  .config-panel .sub { color: var(--muted); font-size: 12px; margin-bottom: 20px; }
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .config-group {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .config-group-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .config-group-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .config-name-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: inherit;
+    font-size: 14px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    width: 100%;
+    padding-bottom: 2px;
+    outline: none;
+  }
+  .config-label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; display: block; margin-bottom: 8px; }
+  .config-zips {
+    width: 100%;
+    height: 90px;
+    background: #0d1525;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 12px;
+    resize: vertical;
+    font-family: 'DM Mono', monospace;
+    line-height: 1.6;
+    outline: none;
+  }
+  .zip-count { margin-top: 6px; font-size: 11px; color: var(--muted); }
+  .config-actions { display: flex; gap: 10px; }
+
+  /* Input panel */
+  .input-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+  }
+  .input-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .input-label { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .lead-textarea {
+    width: 100%;
+    height: 200px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 14px 16px;
+    font-size: 12px;
+    resize: vertical;
+    font-family: 'DM Mono', monospace;
+    line-height: 1.6;
+    outline: none;
+  }
+  .lead-textarea::placeholder { color: var(--muted); }
+  .error-box {
+    margin-top: 10px;
+    color: var(--red);
+    font-size: 12px;
+    padding: 8px 12px;
+    background: rgba(255,107,107,0.08);
+    border-radius: 6px;
+    border: 1px solid rgba(255,107,107,0.2);
+    display: none;
+  }
+
+  /* Stats */
+  .stats-row { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+  .stat-card { background: var(--card); border-radius: 8px; padding: 8px 16px; text-align: center; min-width: 80px; }
+  .stat-num { font-size: 22px; font-weight: 700; font-family: 'Syne', sans-serif; }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* Tabs */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .tab {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    padding: 10px 20px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--card); }
+
+  /* Table */
+  .table-panel { background: var(--card); border: 1px solid var(--border); border-top: none; border-radius: 0 0 12px 12px; overflow: hidden; }
+  .table-toolbar { padding: 12px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .toolbar-right { display: flex; gap: 8px; align-items: center; }
+  .btn-copy {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 7px 16px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-copy:hover { opacity: 0.85; }
+  .btn-copy.copied { border-color: var(--accent); color: var(--accent); background: rgba(0,229,160,0.08); }
+  .btn-download {
+    border: none;
+    border-radius: 7px;
+    padding: 7px 16px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 600;
+  }
+  .btn-download:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn-download:active { transform: translateY(0); }
+  .btn-download-all {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 7px;
+    padding: 7px 16px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 600;
+  }
+  .btn-download-all:hover { background: rgba(0,229,160,0.08); }
+  .toolbar-label { font-size: 11px; color: var(--muted); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead tr { background: rgba(255,255,255,0.02); }
+  th {
+    padding: 9px 14px;
+    text-align: left;
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 9px 14px;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 700px) {
+    .config-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 26px; }
+    .header { flex-direction: column; gap: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="eyebrow">
+        <div class="dot"></div>
+        <span>Solar Lead Tool</span>
+      </div>
+      <h1>ZIP Lead Sorter</h1>
+      <p class="subtitle">Sorts leads into your 3 preset territory groups automatically</p>
+    </div>
+    <button class="btn btn-config" id="configBtn" onclick="toggleConfig()">⚙ Configure Groups</button>
+  </div>
+
+  <!-- Warning banner (shown when no config) -->
+  <div class="warn-banner hidden" id="warnBanner">
+    <span>⚠ Set up your 3 ZIP groups first — you only need to do this once.</span>
+    <button class="btn-warn" onclick="toggleConfig()">Set Up Now →</button>
+  </div>
+
+  <!-- Group pills summary -->
+  <div class="group-pills" id="groupPills"></div>
+
+  <!-- Config Panel -->
+  <div class="config-panel hidden" id="configPanel">
+    <h2>Configure ZIP Groups</h2>
+    <p class="sub">Set once — saved permanently in your browser</p>
+    <div class="config-grid">
+      <div class="config-group" style="border: 1px solid rgba(0,229,160,0.2);">
+        <div class="config-group-header">
+          <div class="config-group-dot" style="background:#00E5A0;"></div>
+          <input class="config-name-input" id="name0" placeholder="Group A name" style="color:#00E5A0;" />
+        </div>
+        <span class="config-label">ZIP Codes (comma or space separated)</span>
+        <textarea class="config-zips" id="zips0" placeholder="89101, 89102, 89103..." oninput="updateZipCount(0)"></textarea>
+        <div class="zip-count" id="count0">0 valid ZIPs</div>
+      </div>
+      <div class="config-group" style="border: 1px solid rgba(245,158,11,0.2);">
+        <div class="config-group-header">
+          <div class="config-group-dot" style="background:#F59E0B;"></div>
+          <input class="config-name-input" id="name1" placeholder="Group B name" style="color:#F59E0B;" />
+        </div>
+        <span class="config-label">ZIP Codes (comma or space separated)</span>
+        <textarea class="config-zips" id="zips1" placeholder="89014, 89015, 89016..." oninput="updateZipCount(1)"></textarea>
+        <div class="zip-count" id="count1">0 valid ZIPs</div>
+      </div>
+      <div class="config-group" style="border: 1px solid rgba(129,140,248,0.2);">
+        <div class="config-group-header">
+          <div class="config-group-dot" style="background:#818CF8;"></div>
+          <input class="config-name-input" id="name2" placeholder="Group C name" style="color:#818CF8;" />
+        </div>
+        <span class="config-label">ZIP Codes (comma or space separated)</span>
+        <textarea class="config-zips" id="zips2" placeholder="89117, 89128, 89129..." oninput="updateZipCount(2)"></textarea>
+        <div class="zip-count" id="count2">0 valid ZIPs</div>
+      </div>
+    </div>
+    <div class="config-actions">
+      <button class="btn btn-primary" onclick="saveConfig()">Save Groups</button>
+      <button class="btn btn-outline" onclick="cancelConfig()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Input Panel -->
+  <div id="inputSection">
+    <div class="input-panel">
+      <div class="input-top">
+        <span class="input-label">Paste Lead Data</span>
+        <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">↑ Upload CSV</button>
+        <input type="file" id="fileInput" accept=".csv,.tsv,.txt" style="display:none" onchange="handleFile(event)" />
+      </div>
+      <textarea class="lead-textarea" id="leadInput"
+        placeholder="Paste CSV or tab-separated lead data here...&#10;&#10;First Name,Last Name,Address,City,State,Zip,Phone&#10;John,Smith,123 Main St,Las Vegas,NV,89101,702-555-0101&#10;Jane,Doe,456 Oak Ave,Henderson,NV,89002,702-555-0202"></textarea>
+      <div class="error-box" id="errorBox"></div>
+      <div style="margin-top:14px;">
+        <button class="btn btn-primary" onclick="processLeads()">Sort Leads →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Section -->
+  <div id="resultsSection" class="hidden">
+    <div class="stats-row" id="statsRow"></div>
+    <div class="tabs" id="tabsRow"></div>
+    <div class="table-panel">
+      <div class="table-toolbar">
+        <button class="btn-download-all" onclick="downloadAllGroups()">⬇ Download All 3 Groups</button>
+        <div class="toolbar-right">
+          <span class="toolbar-label" id="toolbarLabel"></span>
+          <button class="btn-download" id="downloadBtn" onclick="downloadCurrentGroup()">⬇ Download CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const COLORS = ['#00E5A0', '#F59E0B', '#818CF8'];
+const STORAGE_KEY = 'zip_sorter_config_v1';
+
+let config = { groupNames: ['Group A', 'Group B', 'Group C'], groupZips: [[], [], []] };
+let results = null;
+let activeTab = 0;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function init() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) config = JSON.parse(raw);
+  } catch(e) {}
+  renderPills();
+  const hasConfig = config.groupZips.some(g => g.length > 0);
+  if (!hasConfig) {
+    document.getElementById('warnBanner').classList.remove('hidden');
+    document.getElementById('configBtn').classList.add('not-set');
+    document.getElementById('configBtn').textContent = '⚙ Configure Groups';
+  }
+}
+
+// ── Config ────────────────────────────────────────────────────────────────────
+function toggleConfig() {
+  const panel = document.getElementById('configPanel');
+  const isHidden = panel.classList.contains('hidden');
+  if (isHidden) {
+    // Load current config into fields
+    for (let i = 0; i < 3; i++) {
+      document.getElementById('name' + i).value = config.groupNames[i] || '';
+      document.getElementById('zips' + i).value = config.groupZips[i].join(', ');
+      updateZipCount(i);
+    }
+    panel.classList.remove('hidden');
+    document.getElementById('configBtn').textContent = '✕ Close';
+  } else {
+    panel.classList.add('hidden');
+    document.getElementById('configBtn').textContent = '⚙ Edit Groups';
+  }
+}
+
+function cancelConfig() {
+  document.getElementById('configPanel').classList.add('hidden');
+  document.getElementById('configBtn').textContent = '⚙ Edit Groups';
+}
+
+function updateZipCount(i) {
+  const val = document.getElementById('zips' + i).value;
+  const count = val.split(/[\s,]+/).filter(z => /^\d{5}$/.test(z.trim())).length;
+  document.getElementById('count' + i).textContent = count + ' valid ZIPs';
+}
+
+function saveConfig() {
+  const groupNames = [0,1,2].map(i => document.getElementById('name' + i).value.trim() || ('Group ' + String.fromCharCode(65+i)));
+  const groupZips = [0,1,2].map(i =>
+    document.getElementById('zips' + i).value
+      .split(/[\s,]+/)
+      .map(z => z.trim())
+      .filter(z => /^\d{5}$/.test(z))
+  );
+  config = { groupNames, groupZips };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  document.getElementById('configPanel').classList.add('hidden');
+  document.getElementById('warnBanner').classList.add('hidden');
+  document.getElementById('configBtn').classList.remove('not-set');
+  document.getElementById('configBtn').textContent = '⚙ Edit Groups';
+  renderPills();
+}
+
+function renderPills() {
+  const pills = document.getElementById('groupPills');
+  const hasConfig = config.groupZips.some(g => g.length > 0);
+  if (!hasConfig) { pills.innerHTML = ''; return; }
+  pills.innerHTML = config.groupNames.map((name, i) => `
+    <div class="pill" style="background:${COLORS[i]}11; border: 1px solid ${COLORS[i]}44;">
+      <div class="pill-dot" style="background:${COLORS[i]};"></div>
+      <span style="color:${COLORS[i]}">${name}</span>
+      <span style="color:var(--muted)">· ${config.groupZips[i].length} ZIPs</span>
+    </div>
+  `).join('');
+}
+
+// ── File upload ───────────────────────────────────────────────────────────────
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => { document.getElementById('leadInput').value = ev.target.result; };
+  reader.readAsText(file);
+}
+
+// ── Columns to keep ──────────────────────────────────────────────────────────
+const KEEP_COLS = ['Address 1', 'City', 'State', 'Zip', 'Note', 'Date Created'];
+
+// ── Parse ─────────────────────────────────────────────────────────────────────
+function parseLeads(raw) {
+  const lines = raw.trim().split('\n').filter(Boolean);
+  if (!lines.length) return null;
+  const delim = lines[0].includes('\t') ? '\t' : ',';
+  const allHeaders = lines[0].split(delim).map(h => h.trim().replace(/^"|"$/g, ''));
+
+  // Find index of each desired column (case-insensitive)
+  const keepIndices = KEEP_COLS.map(col =>
+    allHeaders.findIndex(h => h.toLowerCase() === col.toLowerCase())
+  );
+
+  // Final headers: Rep Notes first, then the kept columns
+  const headers = ['Rep Notes', ...KEEP_COLS];
+
+  // Zip is at index 4 in KEEP_COLS, so index 4 in filtered headers (+1 for Rep Notes = index 4)
+  const zipIndex = headers.findIndex(h => /^zip$/i.test(h));
+
+  const rows = lines.slice(1).map(line => {
+    const cells = line.split(delim).map(c => c.trim().replace(/^"|"$/g, ''));
+    return ['', ...keepIndices.map(i => i >= 0 ? (cells[i] || '') : '')];
+  });
+
+  return { headers, rows, zipIndex };
+}
+
+// ── Process ───────────────────────────────────────────────────────────────────
+function processLeads() {
+  const errBox = document.getElementById('errorBox');
+  errBox.style.display = 'none';
+
+  const raw = document.getElementById('leadInput').value;
+  if (!raw.trim()) { showError('Paste your lead data first.'); return; }
+
+  const hasConfig = config.groupZips.some(g => g.length > 0);
+  if (!hasConfig) { showError('Set up your ZIP groups first using the Configure Groups button.'); return; }
+
+  const parsed = parseLeads(raw);
+  if (!parsed) { showError('Could not parse the data. Check your formatting.'); return; }
+  if (parsed.zipIndex === -1) { showError("No ZIP code column found. Make sure your header says 'Zip', 'ZIP Code', or 'Postal'."); return; }
+
+  const { headers, rows, zipIndex } = parsed;
+
+  const groups = config.groupZips.map((zips, i) => ({
+    name: config.groupNames[i],
+    color: COLORS[i],
+    zipSet: new Set(zips),
+    rows: []
+  }));
+  const unmatched = [];
+
+  for (const row of rows) {
+    const zip = (row[zipIndex] || '').trim().slice(0, 5);
+    const g = groups.find(g => g.zipSet.has(zip));
+    if (g) g.rows.push(row);
+    else unmatched.push(row);
+  }
+
+  results = { headers, groups, unmatched };
+  activeTab = 0;
+
+  document.getElementById('inputSection').classList.add('hidden');
+  renderResults();
+  document.getElementById('resultsSection').classList.remove('hidden');
+}
+
+function showError(msg) {
+  const b = document.getElementById('errorBox');
+  b.textContent = '⚠ ' + msg;
+  b.style.display = 'block';
+}
+
+// ── Render Results ────────────────────────────────────────────────────────────
+function renderResults() {
+  // Stats
+  const statsRow = document.getElementById('statsRow');
+  let statsHTML = '<div style="display:flex;gap:10px;flex-wrap:wrap">';
+  results.groups.forEach(g => {
+    statsHTML += `<div class="stat-card" style="border: 1px solid ${g.color}44">
+      <div class="stat-num" style="color:${g.color}">${g.rows.length}</div>
+      <div class="stat-label">${g.name}</div>
+    </div>`;
+  });
+  if (results.unmatched.length > 0) {
+    statsHTML += `<div class="stat-card" style="border:1px solid var(--border)">
+      <div class="stat-num" style="color:var(--red)">${results.unmatched.length}</div>
+      <div class="stat-label">Unmatched</div>
+    </div>`;
+  }
+  statsHTML += '</div>';
+  statsHTML += `<button class="btn btn-outline" onclick="resetTool()">← New List</button>`;
+  statsRow.innerHTML = statsHTML;
+
+  // Tabs
+  const tabsRow = document.getElementById('tabsRow');
+  let tabsHTML = '';
+  results.groups.forEach((g, i) => {
+    tabsHTML += `<button class="tab ${i === activeTab ? 'active' : ''}"
+      style="${i === activeTab ? `border-bottom-color:${g.color};color:${g.color}` : ''}"
+      onclick="switchTab(${i})">${g.name} <span style="font-size:11px;opacity:0.7">(${g.rows.length})</span></button>`;
+  });
+  if (results.unmatched.length > 0) {
+    const isActive = activeTab === 3;
+    tabsHTML += `<button class="tab ${isActive ? 'active' : ''}"
+      style="${isActive ? 'border-bottom-color:var(--red);color:var(--red)' : ''}"
+      onclick="switchTab(3)">Unmatched <span style="font-size:11px;opacity:0.7">(${results.unmatched.length})</span></button>`;
+  }
+  tabsRow.innerHTML = tabsHTML;
+
+  renderTable();
+}
+
+function switchTab(i) {
+  activeTab = i;
+  renderResults();
+}
+
+function renderTable() {
+  const thead = document.getElementById('tableHead');
+  const tbody = document.getElementById('tableBody');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const toolbarLabel = document.getElementById('toolbarLabel');
+
+  thead.innerHTML = '<tr>' + results.headers.map(h =>
+    `<th>${h}</th>`
+  ).join('') + '</tr>';
+
+  const rows = activeTab < 3 ? results.groups[activeTab].rows : results.unmatched;
+  tbody.innerHTML = rows.map(row =>
+    '<tr>' + results.headers.map((_, ci) =>
+      `<td title="${(row[ci]||'').replace(/"/g,"'")}">${row[ci] || ''}</td>`
+    ).join('') + '</tr>'
+  ).join('');
+
+  if (activeTab < 3) {
+    const g = results.groups[activeTab];
+    downloadBtn.style.display = 'block';
+    downloadBtn.style.background = g.color;
+    downloadBtn.style.color = '#0A0F1E';
+    downloadBtn.textContent = `⬇ Download ${g.name}.csv`;
+    toolbarLabel.textContent = `${g.rows.length} leads`;
+  } else {
+    downloadBtn.style.display = 'block';
+    downloadBtn.style.background = 'var(--red)';
+    downloadBtn.style.color = '#fff';
+    downloadBtn.textContent = '⬇ Download Unmatched.csv';
+    toolbarLabel.textContent = `${results.unmatched.length} leads`;
+  }
+}
+
+function rowsToCSV(headers, rows) {
+  const escape = v => {
+    const s = String(v || '');
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s;
+  };
+  return [headers, ...rows].map(r => r.map(escape).join(',')).join('\n');
+}
+
+function downloadCSV(filename, headers, rows) {
+  const csv = rowsToCSV(headers, rows);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadCurrentGroup() {
+  if (activeTab < 3) {
+    const g = results.groups[activeTab];
+    downloadCSV(g.name.replace(/\s+/g, '_') + '.csv', results.headers, g.rows);
+  } else {
+    downloadCSV('Unmatched.csv', results.headers, results.unmatched);
+  }
+}
+
+function downloadAllGroups() {
+  results.groups.forEach(g => {
+    if (g.rows.length > 0) {
+      setTimeout(() => {
+        downloadCSV(g.name.replace(/\s+/g, '_') + '.csv', results.headers, g.rows);
+      }, results.groups.indexOf(g) * 300);
+    }
+  });
+}
+
+function resetTool() {
+  results = null;
+  activeTab = 0;
+  document.getElementById('leadInput').value = '';
+  document.getElementById('resultsSection').classList.add('hidden');
+  document.getElementById('inputSection').classList.remove('hidden');
+  document.getElementById('errorBox').style.display = 'none';
+}
+
+init();
+</script>
+</body>
+</html>
